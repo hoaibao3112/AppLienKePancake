@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
  * Chạy lệnh: node pancake_sim.js
  */
 
-const WEBHOOK_URL = 'http://localhost:5000/api/pancake-webhook';
+const WEBHOOK_URL = 'https://app-lien-ke-pancake.vercel.app/api/pancake-webhook';
 
 const mockLeads = [
   {
