@@ -45,17 +45,25 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           <RocketOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
           <span>PANCAKE CRM</span>
         </div>
-        <nav className="admin-nav">
-          <Link to="/admin/dashboard" className={activeKey === '/admin/dashboard' ? 'active' : ''}>
-            <DashboardOutlined /> Dashboard
-          </Link>
-          <Link to="/admin/customers" className={activeKey === '/admin/customers' ? 'active' : ''}>
-            <UserOutlined /> Khách hàng & Leads
-          </Link>
-          <Link to="/admin/courses" className={activeKey === '/admin/courses' ? 'active' : ''}>
-            <BookOutlined /> Quản lý khóa học
-          </Link>
-        </nav>
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          style={{ height: '100%', borderRight: 0, padding: '16px 8px', background: '#001529' }}
+          theme="dark"
+        >
+          <Menu.Item key="/admin/dashboard" icon={<DashboardOutlined />}>
+            <Link to="/admin/dashboard">Dashboard</Link>
+          </Menu.Item>
+          <Menu.Item key="/admin/customers" icon={<TeamOutlined />}>
+            <Link to="/admin/customers">Khách hàng & Leads</Link>
+          </Menu.Item>
+          <Menu.Item key="/admin/courses" icon={<BookOutlined />}>
+            <Link to="/admin/courses">Quản lý khóa học</Link>
+          </Menu.Item>
+          <Menu.Item key="/admin/logs" icon={<ThunderboltOutlined />}>
+            <Link to="/admin/logs">Nhật ký hệ thống</Link>
+          </Menu.Item>
+        </Menu>
         <div style={{ padding: '0 32px', marginTop: 'auto', paddingBottom: '32px' }}>
           <Card size="small" style={{ background: 'rgba(255,255,255,0.05)', border: 'none' }}>
             <Text style={{ color: '#94a3b8', fontSize: '12px' }}>Đang kết nối với</Text>
@@ -335,11 +343,58 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminLayout><CrmDashboard /></AdminLayout>} />
           <Route path="/admin/customers" element={<AdminLayout><CustomerList /></AdminLayout>} />
           <Route path="/admin/courses" element={<AdminLayout><CourseAdminPage /></AdminLayout>} />
+          <Route path="/admin/logs" element={<AdminLayout><SystemLogPage /></AdminLayout>} />
         </Routes>
       </Router>
     </ConfigProvider>
   );
 }
+
+// Component hiển thị Nhật ký hệ thống
+const SystemLogPage = () => {
+  const [logs, setLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchLogs = () => {
+      fetch(`${API_URL}/logs`)
+        .then(res => res.json())
+        .then(data => setLogs(data))
+        .catch(err => console.error('Lỗi lấy log:', err));
+    };
+
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 3000); // Tự động cập nhật mỗi 3 giây
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1>Nhật ký hệ thống (Real-time)</h1>
+        <Button onClick={() => setLogs([])} icon={<RocketOutlined />}>Xóa nhật ký tạm</Button>
+      </div>
+      <Card style={{ borderRadius: 16 }}>
+        <List
+          itemLayout="vertical"
+          dataSource={logs}
+          renderItem={(log: any) => (
+            <List.Item key={log.id}>
+              <List.Item.Meta
+                title={<Text strong>[{log.time}] {log.message}</Text>}
+                description={
+                  <pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4, fontSize: 12 }}>
+                    {JSON.stringify(log.data, null, 2)}
+                  </pre>
+                }
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: 'Chưa có dữ liệu Webhook nào được gửi sang.' }}
+        />
+      </Card>
+    </div>
+  );
+};
 
 // Component mới cho trang quản lý khóa học trong Admin
 const CourseAdminPage = () => {

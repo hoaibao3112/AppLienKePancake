@@ -12,6 +12,19 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
+let systemLogs = [];
+const addLog = (message, data = null) => {
+  const logEntry = {
+    id: Date.now(),
+    time: new Date().toLocaleString('vi-VN'),
+    message,
+    data
+  };
+  systemLogs.unshift(logEntry);
+  if (systemLogs.length > 50) systemLogs.pop();
+};
+
 app.use(cors());
 app.use(express.json());
 
@@ -23,9 +36,14 @@ app.get('/api/customers', async (req, res) => {
     const result = await pool.query('SELECT * FROM customers ORDER BY created_at DESC');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    addLog('Lỗi lấy khách hàng', err.message);
     res.status(500).json({ error: 'Lỗi server khi lấy khách hàng' });
   }
+});
+
+// 1b. Lấy nhật ký hệ thống
+app.get('/api/logs', (req, res) => {
+  res.json(systemLogs);
 });
 
 // 2. Lấy danh sách khóa học
@@ -64,8 +82,7 @@ app.post('/api/consultation', async (req, res) => {
 
 // 4. Endpoint NHẬN DỮ LIỆU TỪ PANCAKE (Webhook)
 app.post('/api/pancake-webhook', async (req, res) => {
-  console.log('--- NHẬN DỮ LIỆU WEBHOOK ---');
-  console.log('Payload:', JSON.stringify(req.body));
+  addLog('Nhận dữ liệu Webhook từ Pancake', req.body);
 
   const { 
     name, 
@@ -97,10 +114,10 @@ app.post('/api/pancake-webhook', async (req, res) => {
       [customer.id, 'PANCAKE_SYNC', `Đồng bộ từ Pancake: ${finalContent}`, JSON.stringify(req.body)]
     );
 
-    console.log(`✅ Đã lưu khách hàng: ${finalName}`);
+    addLog(`✅ Đã lưu khách hàng thành công: ${finalName}`);
     res.json({ success: true, message: 'Đã đồng bộ từ Pancake thành công' });
   } catch (err) {
-    console.error('❌ Lỗi Webhook:', err.message);
+    addLog('❌ Lỗi lưu Webhook vào DB', err.message);
     res.status(500).json({ error: 'Lỗi đồng bộ' });
   }
 });
