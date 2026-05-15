@@ -1,83 +1,173 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, Button, Card, Table, Tag, message } from 'antd';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge } from 'antd';
+import { 
+  DashboardOutlined, 
+  UserOutlined, 
+  BookOutlined, 
+  ThunderboltOutlined, 
+  RocketOutlined, 
+  CustomerServiceOutlined,
+  DollarOutlined,
+  ArrowRightOutlined,
+  FacebookOutlined,
+  MessageOutlined
+} from '@ant-design/icons';
 import './App.css';
 
+const { Title, Text } = Typography;
 const API_URL = 'http://localhost:5000/api';
 
 // --- LAYOUTS ---
 const MainLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="main-website">
     <header className="main-header">
-      <h1>EduPancake</h1>
+      <div className="logo">EduPancake</div>
       <nav className="main-nav">
-        <a href="/">Trang chủ</a>
-        <a href="/courses">Khóa học</a>
-        <a href="/admin">Quản trị CRM</a>
+        <Link to="/">Trang chủ</Link>
+        <Link to="/courses">Khóa học</Link>
+        <Link to="/admin">
+          <Button type="primary" shape="round">Dành cho Quản trị</Button>
+        </Link>
       </nav>
     </header>
-    <main className="main-content">{children}</main>
+    <main>{children}</main>
   </div>
 );
 
-const AdminLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="admin-dashboard">
-    <aside className="admin-sidebar">
-      <h2>CRM Admin</h2>
-      <nav className="admin-nav">
-        <a href="/admin/dashboard">Dashboard</a>
-        <a href="/admin/customers">Khách hàng / Leads</a>
-      </nav>
-    </aside>
-    <main className="admin-content">{children}</main>
-  </div>
-);
+const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const activeKey = location.pathname;
+
+  return (
+    <div className="admin-dashboard">
+      <aside className="admin-sidebar">
+        <div className="sidebar-logo">
+          <RocketOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
+          <span>PANCAKE CRM</span>
+        </div>
+        <nav className="admin-nav">
+          <Link to="/admin/dashboard" className={activeKey === '/admin/dashboard' ? 'active' : ''}>
+            <DashboardOutlined /> Dashboard
+          </Link>
+          <Link to="/admin/customers" className={activeKey === '/admin/customers' ? 'active' : ''}>
+            <UserOutlined /> Khách hàng & Leads
+          </Link>
+          <Link to="/admin/courses" className={activeKey === '/admin/courses' ? 'active' : ''}>
+            <BookOutlined /> Quản lý khóa học
+          </Link>
+        </nav>
+        <div style={{ padding: '0 32px', marginTop: 'auto', paddingBottom: '32px' }}>
+          <Card size="small" style={{ background: 'rgba(255,255,255,0.05)', border: 'none' }}>
+            <Text style={{ color: '#94a3b8', fontSize: '12px' }}>Đang kết nối với</Text>
+            <div style={{ color: 'white', fontWeight: 600 }}>Neon Database</div>
+          </Card>
+        </div>
+      </aside>
+      <main className="admin-content">{children}</main>
+    </div>
+  );
+};
 
 // --- WEBSITE PAGES ---
 const HomePage = () => (
-  <div style={{ textAlign: 'center', padding: '50px 0' }}>
-    <h1>Nền tảng học trực tuyến & Tích hợp Pancake CRM</h1>
-    <p>Giải pháp quản lý đào tạo hiện đại nhất cho giảng viên.</p>
-    <Button type="primary" size="large" style={{ marginTop: '20px' }}>Khám phá các khóa học</Button>
+  <div className="hero-section">
+    <Badge count="New" color="#3b82f6" style={{ marginBottom: 16 }}>
+      <Text strong style={{ color: '#3b82f6' }}>TÍCH HỢP PANCAKE CRM 2.0</Text>
+    </Badge>
+    <h1>Nền tảng học tập kết nối CRM đa kênh</h1>
+    <p>Giải pháp tối ưu dành cho giảng viên để quản lý học viên và đồng bộ hóa dữ liệu khách hàng từ Facebook, Zalo, Website về một nơi duy nhất.</p>
+    <Space size="large">
+      <Button type="primary" size="large" shape="round" icon={<RocketOutlined />}>
+        Bắt đầu miễn phí
+      </Button>
+      <Button size="large" shape="round" icon={<CustomerServiceOutlined />}>
+        Xem Demo CRM
+      </Button>
+    </Space>
+    
+    <div style={{ marginTop: 80, display: 'flex', justifyContent: 'center', gap: 60 }}>
+       <div style={{ textAlign: 'center' }}>
+          <Title level={2} style={{ marginBottom: 0 }}>10k+</Title>
+          <Text type="secondary">Học viên</Text>
+       </div>
+       <div style={{ textAlign: 'center' }}>
+          <Title level={2} style={{ marginBottom: 0 }}>500+</Title>
+          <Text type="secondary">Khóa học</Text>
+       </div>
+       <div style={{ textAlign: 'center' }}>
+          <Title level={2} style={{ marginBottom: 0 }}>100%</Title>
+          <Text type="secondary">Đồng bộ</Text>
+       </div>
+    </div>
   </div>
 );
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${API_URL}/courses`)
       .then(res => res.json())
-      .then(data => setCourses(data))
+      .then(data => {
+        setCourses(data);
+        setLoading(false);
+      })
       .catch(err => console.error('Lỗi lấy khóa học:', err));
   }, []);
 
   const handleConsult = (courseTitle: string) => {
-    // Giả lập gửi yêu cầu tư vấn
+    const hide = message.loading('Đang xử lý...', 0);
     fetch(`${API_URL}/consultation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        full_name: 'Khách hàng mới',
-        email: 'khach@test.com',
-        phone: '0123456789',
+        full_name: 'Hoài Bảo (Demo)',
+        email: 'bao@test.com',
+        phone: '0900112233',
         course_name: courseTitle,
         source: 'website'
       })
     })
-    .then(() => message.success(`Đã đăng ký tư vấn ${courseTitle} thành công!`))
-    .catch(() => message.error('Có lỗi xảy ra!'));
+    .then(() => {
+      hide();
+      message.success(`Tuyệt vời! Chúng tôi đã nhận được yêu cầu tư vấn cho khóa "${courseTitle}".`);
+    })
+    .catch(() => {
+      hide();
+      message.error('Có lỗi xảy ra, vui lòng thử lại!');
+    });
   };
 
   return (
-    <div>
-      <h1>Danh Sách Khóa Học (Dữ liệu từ Neon DB)</h1>
-      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '20px' }}>
+    <div style={{ padding: '60px 5%' }}>
+      <div style={{ textAlign: 'center', marginBottom: 60 }}>
+        <Title level={2}>Danh sách khóa học tiêu biểu</Title>
+        <Text type="secondary">Đầu tư vào kiến thức là khoản đầu tư mang lại lợi nhuận cao nhất.</Text>
+      </div>
+      
+      <div className="course-grid">
         {courses.map(course => (
-          <Card key={course.id} title={course.title} style={{ width: 300 }}>
-            <p><strong>Cấp độ:</strong> {course.level}</p>
-            <p><strong>Học phí:</strong> {Number(course.price).toLocaleString()} VND</p>
-            <Button type="primary" onClick={() => handleConsult(course.title)}>Đăng ký tư vấn</Button>
+          <Card 
+            key={course.id} 
+            className="premium-card"
+            cover={<div style={{ height: 180, background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOutlined style={{ fontSize: 60, color: 'white' }} />
+            </div>}
+          >
+            <div style={{ marginBottom: 12 }}>
+               <Tag color="blue">{course.level}</Tag>
+               <Tag color="purple">SaaS</Tag>
+            </div>
+            <Title level={4} style={{ marginBottom: 8 }}>{course.title}</Title>
+            <Text type="secondary" ellipsis={{ rows: 2 }}>{course.description || 'Học tập chuyên sâu với lộ trình bài bản từ chuyên gia đầu ngành.'}</Text>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
+              <Title level={4} style={{ margin: 0, color: '#2563eb' }}>{Number(course.price).toLocaleString()}đ</Title>
+              <Button type="primary" onClick={() => handleConsult(course.title)} icon={<ArrowRightOutlined />}>
+                Đăng ký ngay
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
@@ -88,37 +178,141 @@ const CoursesPage = () => {
 // --- ADMIN PAGES ---
 const CrmDashboard = () => (
   <div>
-    <h1>Tổng quan hệ thống</h1>
-    <div style={{ display: 'flex', gap: '20px' }}>
-      <Card title="Phân tích Lead" style={{ width: 300 }}>
-        <p>Đang đồng bộ từ Pancake...</p>
-      </Card>
+    <div className="page-header">
+      <h1>Tổng quan CRM</h1>
+      <Space>
+         <Button icon={<ThunderboltOutlined />}>Báo cáo nhanh</Button>
+         <Button type="primary" icon={<RocketOutlined />}>Tạo Campaign</Button>
+      </Space>
+    </div>
+
+    <div className="stats-grid">
+      <div className="stat-card">
+        <div className="label">Tổng số Leads</div>
+        <div className="value">2,845</div>
+        <Text type="success" style={{ fontSize: '12px' }}>+12% từ tháng trước</Text>
+      </div>
+      <div className="stat-card">
+        <div className="label">Doanh thu dự kiến</div>
+        <div className="value">1.2 tỷ VND</div>
+        <Text type="success" style={{ fontSize: '12px' }}>+5% từ tháng trước</Text>
+      </div>
+      <div className="stat-card">
+        <div className="label">Nguồn từ Pancake</div>
+        <div className="value">1,120</div>
+        <Text type="secondary" style={{ fontSize: '12px' }}>Chiếm 39.4% tổng nguồn</Text>
+      </div>
+      <div className="stat-card">
+        <div className="label">Tỷ lệ chuyển đổi</div>
+        <div className="value">24.5%</div>
+        <div style={{ width: '100%', height: 4, background: '#eee', marginTop: 8, borderRadius: 2 }}>
+           <div style={{ width: '24.5%', height: '100%', background: '#3b82f6', borderRadius: 2 }}></div>
+        </div>
+      </div>
+    </div>
+
+    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+       <Card title="Phân tích nguồn khách hàng" style={{ borderRadius: 16 }}>
+          <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+             Biểu đồ phân bổ nguồn (Pancake Facebook, Zalo, Website)
+          </div>
+       </Card>
+       <Card title="Hoạt động gần đây" style={{ borderRadius: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+             <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <Avatar icon={<FacebookOutlined />} style={{ background: '#3b82f6' }} />
+                <div>
+                   <Text strong>Nguyễn An</Text> nhắn tin từ Facebook
+                   <br/><Text type="secondary" style={{ fontSize: 12 }}>2 phút trước</Text>
+                </div>
+             </div>
+             <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <Avatar icon={<MessageOutlined />} style={{ background: '#10b981' }} />
+                <div>
+                   <Text strong>Lê Bình</Text> đăng ký tư vấn qua Website
+                   <br/><Text type="secondary" style={{ fontSize: 12 }}>15 phút trước</Text>
+                </div>
+             </div>
+          </Space>
+       </Card>
     </div>
   </div>
 );
 
 const CustomerList = () => {
   const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${API_URL}/customers`)
       .then(res => res.json())
-      .then(data => setCustomers(data))
+      .then(data => {
+        setCustomers(data);
+        setLoading(false);
+      })
       .catch(err => console.error('Lỗi lấy lead:', err));
   }, []);
 
   const columns = [
-    { title: 'Họ tên', dataIndex: 'full_name', key: 'full_name' },
+    { 
+      title: 'Học viên', 
+      key: 'user',
+      render: (record: any) => (
+        <Space>
+          <Avatar icon={<UserOutlined />} />
+          <div>
+            <Text strong>{record.full_name}</Text>
+            <br/><Text type="secondary" style={{ fontSize: 12 }}>{record.email || 'Chưa cập nhật email'}</Text>
+          </div>
+        </Space>
+      )
+    },
     { title: 'Điện thoại', dataIndex: 'phone', key: 'phone' },
-    { title: 'Trạng thái', dataIndex: 'lead_status', key: 'lead_status', render: (s: string) => <Tag color="blue">{s}</Tag> },
-    { title: 'Nguồn', dataIndex: 'source', key: 'source', render: (s: string) => <Tag color={s.includes('pancake') ? 'purple' : 'green'}>{s}</Tag> },
-    { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', render: (d: string) => new Date(d).toLocaleDateString() },
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'lead_status', 
+      key: 'lead_status', 
+      render: (s: string) => {
+        let color = 'blue';
+        if (s === 'CONVERTED') color = 'green';
+        if (s === 'CONSULTING') color = 'orange';
+        return <Tag color={color} style={{ borderRadius: 4 }}>{s}</Tag>;
+      } 
+    },
+    { 
+      title: 'Nguồn dữ liệu', 
+      dataIndex: 'source', 
+      key: 'source', 
+      render: (s: string) => {
+        const isPancake = s.includes('pancake');
+        return (
+          <Tag icon={isPancake ? <ThunderboltOutlined /> : <RocketOutlined />} color={isPancake ? 'purple' : 'cyan'}>
+            {s.toUpperCase()}
+          </Tag>
+        );
+      } 
+    },
+    { 
+      title: 'Thời gian', 
+      dataIndex: 'created_at', 
+      key: 'created_at', 
+      render: (d: string) => <Text type="secondary">{new Date(d).toLocaleDateString('vi-VN')}</Text> 
+    },
   ];
 
   return (
     <div>
-      <h1>Quản lý Leads (Data Real-time từ Neon)</h1>
-      <Table dataSource={customers} columns={columns} rowKey="id" style={{ marginTop: '20px' }} />
+      <div className="page-header">
+        <h1>Quản lý Leads & Học viên</h1>
+        <Button type="primary" icon={<ThunderboltOutlined />}>Đồng bộ từ Pancake</Button>
+      </div>
+      <Table 
+        dataSource={customers} 
+        columns={columns} 
+        rowKey="id" 
+        loading={loading}
+        pagination={{ pageSize: 8 }}
+      />
     </div>
   );
 };
@@ -126,11 +320,20 @@ const CustomerList = () => {
 // --- APP ROUTER ---
 function App() {
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: '#1677ff', borderRadius: 6 } }}>
+    <ConfigProvider 
+      theme={{ 
+        token: { 
+          colorPrimary: '#2563eb', 
+          borderRadius: 12,
+          fontFamily: 'Inter, sans-serif'
+        } 
+      }}
+    >
       <Router>
         <Routes>
           <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
           <Route path="/courses" element={<MainLayout><CoursesPage /></MainLayout>} />
+          
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<AdminLayout><CrmDashboard /></AdminLayout>} />
           <Route path="/admin/customers" element={<AdminLayout><CustomerList /></AdminLayout>} />
