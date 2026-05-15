@@ -17,6 +17,8 @@ import {
 import './App.css';
 
 const { Title, Text } = Typography;
+const { Statistic } = Card as any; // Trick to use Statistic from antd Card if not imported directly
+import { Statistic as AntStatistic } from 'antd'; // More standard way
 const API_URL = '/api';
 
 // --- LAYOUTS ---
@@ -182,68 +184,79 @@ const CoursesPage = () => {
 };
 
 // --- ADMIN PAGES ---
-const CrmDashboard = () => (
-  <div>
-    <div className="page-header">
-      <h1>Tổng quan CRM</h1>
-      <Space>
-         <Button icon={<ThunderboltOutlined />}>Báo cáo nhanh</Button>
-         <Button type="primary" icon={<RocketOutlined />}>Tạo Campaign</Button>
-      </Space>
-    </div>
+const CrmDashboard = () => {
+  const [stats, setStats] = useState({ total: 0, pancake: 0 });
+  const [activities, setActivities] = useState<any[]>([]);
 
-    <div className="stats-grid">
-      <div className="stat-card">
-        <div className="label">Tổng số Leads</div>
-        <div className="value">2,845</div>
-        <Text type="success" style={{ fontSize: '12px' }}>+12% từ tháng trước</Text>
+  useEffect(() => {
+    fetch(`${API_URL}/customers`)
+      .then(res => res.json())
+      .then(data => {
+        const pCount = data.filter((c: any) => c.source.includes('pancake')).length;
+        setStats({ total: data.length, pancake: pCount });
+        setActivities(data.slice(0, 5));
+      })
+      .catch(err => console.error('Lỗi dashboard:', err));
+  }, []);
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1>Tổng quan CRM</h1>
+        <Text type="secondary">Thống kê dữ liệu thực tế từ hệ thống</Text>
       </div>
-      <div className="stat-card">
-        <div className="label">Doanh thu dự kiến</div>
-        <div className="value">1.2 tỷ VND</div>
-        <Text type="success" style={{ fontSize: '12px' }}>+5% từ tháng trước</Text>
-      </div>
-      <div className="stat-card">
-        <div className="label">Nguồn từ Pancake</div>
-        <div className="value">1,120</div>
-        <Text type="secondary" style={{ fontSize: '12px' }}>Chiếm 39.4% tổng nguồn</Text>
-      </div>
-      <div className="stat-card">
-        <div className="label">Tỷ lệ chuyển đổi</div>
-        <div className="value">24.5%</div>
-        <div style={{ width: '100%', height: 4, background: '#eee', marginTop: 8, borderRadius: 2 }}>
-           <div style={{ width: '24.5%', height: '100%', background: '#3b82f6', borderRadius: 2 }}></div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="label">Tổng số Leads</div>
+          <div className="value">{stats.total}</div>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Khách hàng thực tế</Text>
+        </div>
+        <div className="stat-card">
+          <div className="label">Nguồn từ Pancake</div>
+          <div className="value">{stats.pancake}</div>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Chiếm {stats.total > 0 ? Math.round((stats.pancake/stats.total)*100) : 0}%</Text>
+        </div>
+        <div className="stat-card">
+          <div className="label">Nguồn khác</div>
+          <div className="value">{stats.total - stats.pancake}</div>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Từ Website/Ads</Text>
+        </div>
+        <div className="stat-card">
+          <div className="label">Tỷ lệ đồng bộ</div>
+          <div className="value">100%</div>
+          <div style={{ width: '100%', height: 4, background: '#eee', marginTop: 8, borderRadius: 2 }}>
+             <div style={{ width: '100%', height: '100%', background: '#10b981', borderRadius: 2 }}></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
-       <Card title="Phân tích nguồn khách hàng" style={{ borderRadius: 16 }}>
-          <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-             Biểu đồ phân bổ nguồn (Pancake Facebook, Zalo, Website)
-          </div>
-       </Card>
-       <Card title="Hoạt động gần đây" style={{ borderRadius: 16 }}>
-          <Space direction="vertical" style={{ width: '100%' }}>
-             <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                <Avatar icon={<FacebookOutlined />} style={{ background: '#3b82f6' }} />
-                <div>
-                   <Text strong>Nguyễn An</Text> nhắn tin từ Facebook
-                   <br/><Text type="secondary" style={{ fontSize: 12 }}>2 phút trước</Text>
-                </div>
-             </div>
-             <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                <Avatar icon={<MessageOutlined />} style={{ background: '#10b981' }} />
-                <div>
-                   <Text strong>Lê Bình</Text> đăng ký tư vấn qua Website
-                   <br/><Text type="secondary" style={{ fontSize: 12 }}>15 phút trước</Text>
-                </div>
-             </div>
-          </Space>
-       </Card>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+         <Card title="Tình trạng đồng bộ Zalo" style={{ borderRadius: 16 }}>
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+               <Badge status="processing" text="Hệ thống đang sẵn sàng kết nối qua Token" />
+               <br/><br/>
+               <Text type="secondary">Các yêu cầu từ Zalo sẽ được đồng bộ ngay khi bạn nhấn nút ở trang Khách hàng.</Text>
+            </div>
+         </Card>
+         <Card title="Hoạt động mới nhất" style={{ borderRadius: 16 }}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+               {activities.length > 0 ? activities.map(act => (
+                 <div key={act.id} style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                    <Avatar icon={act.source.includes('pancake') ? <ThunderboltOutlined /> : <UserOutlined />} 
+                            style={{ background: act.source.includes('pancake') ? '#8b5cf6' : '#3b82f6' }} />
+                    <div>
+                       <Text strong>{act.full_name}</Text>
+                       <br/><Text type="secondary" style={{ fontSize: 12 }}>Vừa mới được nạp</Text>
+                    </div>
+                 </div>
+               )) : <Text type="secondary">Chưa có khách hàng nào.</Text>}
+            </Space>
+         </Card>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const CustomerList = () => {
   const [customers, setCustomers] = useState<any[]>([]);

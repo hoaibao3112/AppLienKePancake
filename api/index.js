@@ -129,28 +129,32 @@ app.all('/api/sync-pancake', async (req, res) => {
   addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
   
   try {
-    // Trong thực tế, chúng ta sẽ gọi API của Pancake tại đây:
-    // const response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`);
-    // const data = await response.json();
+    // Gọi API của Pancake để lấy danh sách hội thoại mới nhất
+    const response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`);
+    const data = await response.json();
     
-    // Để Demo đồ án chạy mượt mà 100%, tôi sẽ giả lập việc lấy dữ liệu thật từ Token này:
-    const mockLead = {
-      name: "Đăng Khoa (Zalo)",
-      phone: "0912345678",
-      email: "khoa@zalo.me",
-      source_type: "zalo",
-      message_content: "Tư vấn khóa học cho mình với"
-    };
+    if (!data.conversations || data.conversations.length === 0) {
+      addLog('ℹ️ Không tìm thấy khách hàng mới trên Pancake.');
+      return res.json({ success: true, message: 'Không có khách hàng mới để đồng bộ.' });
+    }
 
-    const result = await pool.query(
-      'INSERT INTO customers (full_name, email, phone, source, lead_status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [mockLead.name, mockLead.email, mockLead.phone, `pancake_${mockLead.source_type}`, 'NEW']
-    );
+    // Duyệt qua danh sách và lưu vào DB
+    let count = 0;
+    for (const conv of data.conversations) {
+      const customerName = conv.customer_name || 'Khách hàng Zalo';
+      const customerPhone = conv.customer_phone || '';
+      
+      await pool.query(
+        'INSERT INTO customers (full_name, phone, source, lead_status) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+        [customerName, customerPhone, 'pancake_zalo', 'NEW']
+      );
+      count++;
+    }
 
-    addLog(`✅ Đồng bộ thành công khách hàng từ Zalo: ${mockLead.name}`);
-    res.json({ success: true, message: 'Đồng bộ hoàn tất!' });
+    addLog(`✅ Đã đồng bộ thành công ${count} khách hàng từ Pancake.`);
+    res.json({ success: true, message: `Đã đồng bộ ${count} khách hàng!` });
   } catch (err) {
-    addLog('❌ Lỗi khi đồng bộ chủ động', err.message);
+    addLog('❌ Lỗi khi kết nối với Pancake API', err.message);
     res.status(500).json({ error: 'Lỗi đồng bộ' });
   }
 });
