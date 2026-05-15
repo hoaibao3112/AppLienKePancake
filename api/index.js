@@ -29,6 +29,10 @@ const initDB = async () => {
         level TEXT DEFAULT 'Basic',
         created_at TIMESTAMP DEFAULT NOW()
       );
+      -- Đảm bảo các cột tồn tại nếu bảng đã có sẵn từ trước
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT;
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0;
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Basic';
     `);
     console.log('✅ Database initialized: courses table ready.');
   } catch (err) {
@@ -92,7 +96,7 @@ app.post('/api/courses', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     addLog('❌ Lỗi thêm khóa học', err.message);
-    res.status(500).json({ error: 'Lỗi server khi thêm khóa học' });
+    res.status(500).json({ error: 'Lỗi server khi thêm khóa học', details: err.message });
   }
 });
 
