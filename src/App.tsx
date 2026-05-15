@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge, Menu, List } from 'antd';
+import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge, Menu, List, Modal, Form, Input, InputNumber, Select } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
@@ -440,15 +440,128 @@ const SystemLogPage = () => {
 
 // Component mới cho trang quản lý khóa học trong Admin
 const CourseAdminPage = () => {
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
+  const fetchCourses = () => {
+    setLoading(true);
+    fetch(`${API_URL}/courses`)
+      .then(res => res.json())
+      .then(data => {
+        setCourses(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Lỗi lấy khóa học:', err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const handleAddCourse = (values: any) => {
+    fetch(`${API_URL}/courses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.id) {
+          message.success('Đã thêm khóa học mới thành công!');
+          setIsModalOpen(false);
+          form.resetFields();
+          fetchCourses();
+        } else {
+          message.error('Có lỗi xảy ra khi thêm khóa học.');
+        }
+      })
+      .catch(() => message.error('Không thể kết nối với Server.'));
+  };
+
+  const columns = [
+    { title: 'Tên khóa học', dataIndex: 'title', key: 'title', render: (text: string) => <Text strong>{text}</Text> },
+    { title: 'Trình độ', dataIndex: 'level', key: 'level', render: (lvl: string) => <Tag color="blue">{lvl}</Tag> },
+    { title: 'Giá', dataIndex: 'price', key: 'price', render: (p: number) => <Text>{Number(p).toLocaleString()}đ</Text> },
+    { title: 'Mô tả', dataIndex: 'description', key: 'description', ellipsis: true },
+  ];
+
   return (
     <div>
       <div className="page-header">
         <h1>Quản lý nội dung khóa học</h1>
-        <Button type="primary" icon={<BookOutlined />}>Thêm khóa học mới</Button>
+        <Button 
+          type="primary" 
+          icon={<BookOutlined />} 
+          onClick={() => setIsModalOpen(true)}
+        >
+          Thêm khóa học mới
+        </Button>
       </div>
+
       <Card style={{ borderRadius: 16 }}>
-         <Text type="secondary">Tính năng đang được cập nhật. Bạn có thể xem danh sách khóa học ở trang chủ.</Text>
+        <Table 
+          dataSource={courses} 
+          columns={columns} 
+          rowKey="id" 
+          loading={loading}
+          pagination={{ pageSize: 5 }}
+        />
       </Card>
+
+      <Modal
+        title="Thêm khóa học mới"
+        open={isModalOpen}
+        onCancel={() => setIsModalOpen(false)}
+        onOk={() => form.submit()}
+        okText="Lưu khóa học"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAddCourse}
+          initialValues={{ level: 'Basic', price: 500000 }}
+          style={{ marginTop: 20 }}
+        >
+          <Form.Item
+            name="title"
+            label="Tên khóa học"
+            rules={[{ required: true, message: 'Vui lòng nhập tên khóa học!' }]}
+          >
+            <Input placeholder="Ví dụ: Luyện thi TOEIC cấp tốc" />
+          </Form.Item>
+
+          <Form.Item name="level" label="Trình độ">
+            <Select>
+              <Select.Option value="Basic">Cơ bản (Basic)</Select.Option>
+              <Select.Option value="Intermediate">Trung cấp (Intermediate)</Select.Option>
+              <Select.Option value="Advanced">Nâng cao (Advanced)</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="price"
+            label="Học phí (VNĐ)"
+            rules={[{ required: true, message: 'Vui lòng nhập học phí!' }]}
+          >
+            <InputNumber 
+              style={{ width: '100%' }} 
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+            />
+          </Form.Item>
+
+          <Form.Item name="description" label="Mô tả khóa học">
+            <Input.TextArea rows={4} placeholder="Mô tả tóm tắt nội dung khóa học..." />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

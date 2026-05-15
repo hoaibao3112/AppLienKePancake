@@ -49,11 +49,27 @@ app.get('/api/logs', (req, res) => {
 // 2. Lấy danh sách khóa học
 app.get('/api/courses', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM courses');
+    const result = await pool.query('SELECT * FROM courses ORDER BY id DESC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Lỗi server khi lấy khóa học' });
+  }
+});
+
+// 2b. Thêm khóa học mới
+app.post('/api/courses', async (req, res) => {
+  const { title, description, price, level } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO courses (title, description, price, level) VALUES ($1, $2, $3, $4) RETURNING *',
+      [title, description, price || 0, level || 'Basic']
+    );
+    addLog(`🆕 Đã thêm khóa học mới: ${title}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    addLog('❌ Lỗi thêm khóa học', err.message);
+    res.status(500).json({ error: 'Lỗi server khi thêm khóa học' });
   }
 });
 
