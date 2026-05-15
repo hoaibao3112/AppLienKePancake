@@ -12,6 +12,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+app.use(cors());
+app.use(express.json());
+
 const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InB6bF8yMTQzNzU2MTQ0NDY0Nzk2NjAyIiwidGltZXN0YW1wIjoxNzc4ODM0ODc5fQ.-yr9Mpd4dS-377wOtR_kPbeg3WF4mEKXy2WkMgBdjL8';
 
 // --- DATABASE INITIALIZATION ---
