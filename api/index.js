@@ -20,6 +20,7 @@ const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsI
 // --- DATABASE INITIALIZATION ---
 const initDB = async () => {
   try {
+    addLog('⏳ Đang kiểm tra cấu trúc Database...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
@@ -28,14 +29,17 @@ const initDB = async () => {
         price NUMERIC DEFAULT 0,
         level TEXT DEFAULT 'Basic',
         created_at TIMESTAMP DEFAULT NOW()
-      );
-      -- Đảm bảo các cột tồn tại nếu bảng đã có sẵn từ trước
-      ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT;
-      ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0;
-      ALTER TABLE courses ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Basic';
+      )
     `);
-    console.log('✅ Database initialized: courses table ready.');
+    
+    // Thêm từng cột nếu chưa có (Migration)
+    await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT');
+    await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0');
+    await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS level TEXT DEFAULT ' + "'Basic'");
+    
+    addLog('✅ Database initialized: courses table ready.');
   } catch (err) {
+    addLog('❌ Database init error', err.message);
     console.error('❌ Database init error:', err);
   }
 };

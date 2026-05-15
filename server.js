@@ -23,8 +23,14 @@ const initDB = async () => {
         price NUMERIC DEFAULT 0,
         level TEXT DEFAULT 'Basic',
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
     `);
+    
+    // Migration
+    await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT');
+    await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0');
+    await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS level TEXT DEFAULT ' + "'Basic'");
+    
     console.log('✅ Database initialized: courses table ready.');
   } catch (err) {
     console.error('❌ Database init error:', err);
