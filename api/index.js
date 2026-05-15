@@ -129,21 +129,23 @@ app.all('/api/sync-pancake', async (req, res) => {
   addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
   
   try {
-    // Gọi API của Pancake để lấy danh sách hội thoại mới nhất
-    const response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`);
+    // Gọi API chính xác của Pancake dành cho trang Zalo của bạn
+    const PAGE_ID = 'pzl_84374170367';
+    const response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
     const data = await response.json();
     
     if (!data.conversations || data.conversations.length === 0) {
-      addLog('ℹ️ Không tìm thấy khách hàng mới trên Pancake.');
-      return res.json({ success: true, message: 'Không có khách hàng mới để đồng bộ.' });
+      addLog('ℹ️ Không tìm thấy hội thoại mới trên Zalo.');
+      return res.json({ success: true, message: 'Không có khách hàng mới.' });
     }
 
-    // Duyệt qua danh sách và lưu vào DB
+    // Duyệt qua danh sách và lưu vào DB (Đã có khóa chặn trùng lặp ở DB nên yên tâm)
     let count = 0;
     for (const conv of data.conversations) {
       const customerName = conv.customer_name || 'Khách hàng Zalo';
       const customerPhone = conv.customer_phone || '';
       
+      // ON CONFLICT DO NOTHING sẽ tự động bỏ qua nếu người này đã có trong danh sách
       await pool.query(
         'INSERT INTO customers (full_name, phone, source, lead_status) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
         [customerName, customerPhone, 'pancake_zalo', 'NEW']
