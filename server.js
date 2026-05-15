@@ -92,6 +92,10 @@ app.post('/api/pancake-webhook', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server EduPancake đang chạy tại http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server EduPancake đang chạy tại http://localhost:${port}`);
+  });
+}
+
+export default app;
