@@ -132,17 +132,21 @@ app.all('/api/sync-pancake', async (req, res) => {
     // Gọi API chính xác của Pancake dành cho trang Zalo của bạn
     const PAGE_ID = 'pzl_84374170367';
     const response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
-    const data = await response.json();
+    const resultData = await response.json();
     
-    if (!data.conversations || data.conversations.length === 0) {
-      addLog('ℹ️ Không tìm thấy hội thoại mới trên Zalo.');
-      return res.json({ success: true, message: 'Không có khách hàng mới.' });
+    // Pancake API đôi khi trả về conversations ở root, đôi khi ở trong resultData.data
+    const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || [];
+    
+    addLog(`🔍 Tìm thấy ${conversations.length} hội thoại trên Pancake.`, resultData);
+
+    if (conversations.length === 0) {
+      return res.json({ success: true, message: 'Không tìm thấy khách hàng mới.' });
     }
 
-    // Duyệt qua danh sách và lưu vào DB (Đã có khóa chặn trùng lặp ở DB nên yên tâm)
+    // Duyệt qua danh sách và lưu vào DB
     let count = 0;
-    for (const conv of data.conversations) {
-      const customerName = conv.customer_name || 'Khách hàng Zalo';
+    for (const conv of conversations) {
+      const customerName = conv.customer_name || conv.name || 'Khách hàng Zalo';
       const customerPhone = conv.customer_phone || '';
       
       // ON CONFLICT DO NOTHING sẽ tự động bỏ qua nếu người này đã có trong danh sách
