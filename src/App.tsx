@@ -334,10 +334,26 @@ function App() {
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<AdminLayout><CrmDashboard /></AdminLayout>} />
           <Route path="/admin/customers" element={<AdminLayout><CustomerList /></AdminLayout>} />
+          <Route path="/admin/courses" element={<AdminLayout><CourseAdminPage /></AdminLayout>} />
         </Routes>
       </Router>
     </ConfigProvider>
   );
 }
+
+// Component mới cho trang quản lý khóa học trong Admin
+const CourseAdminPage = () => {
+  return (
+    <div>
+      <div className="page-header">
+        <h1>Quản lý nội dung khóa học</h1>
+        <Button type="primary" icon={<BookOutlined />}>Thêm khóa học mới</Button>
+      </div>
+      <Card style={{ borderRadius: 16 }}>
+         <Text type="secondary">Tính năng đang được cập nhật. Bạn có thể xem danh sách khóa học ở trang chủ.</Text>
+      </Card>
+    </div>
+  );
+};
 
 export default App;
