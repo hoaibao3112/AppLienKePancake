@@ -12,7 +12,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InB6bF8yMTQzNzU2MTQ0NDY0Nzk2NjAyIiwidGltZXN0YW1wIjoxNzc4ODM0ODc5fQ.-yr9Mpd4dS-377wOtR_kPbeg3WF4mEKXy2WkMgBdjL8';
+const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN;
 
 // Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
 let systemLogs = [];
@@ -130,7 +130,7 @@ app.all('/api/sync-pancake', async (req, res) => {
   
   try {
     // Gọi API chính xác của Pancake dành cho trang Zalo của bạn
-    const PAGE_ID = 'pzl_84374170367';
+    const PAGE_ID = 'pzl_2143756144464796602';
     const response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
     const resultData = await response.json();
     
