@@ -436,10 +436,14 @@ const SystemLogPage = () => {
             icon={<ThunderboltOutlined />} 
             onClick={() => {
               const hide = message.loading('Đang kiểm tra kết nối...', 0);
-              fetch(`${API_URL}/test-db`)
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+              fetch(`${API_URL}/test-db`, { signal: controller.signal })
                 .then(res => res.json())
                 .then(data => {
                   hide();
+                  clearTimeout(timeoutId);
                   if (data.success) {
                     message.success(`Kết nối Database thành công! Thời gian: ${data.time}`);
                   } else {
@@ -448,7 +452,8 @@ const SystemLogPage = () => {
                 })
                 .catch(() => {
                   hide();
-                  message.error('Không thể gọi API kiểm tra.');
+                  clearTimeout(timeoutId);
+                  message.error('Không thể kết nối với Server hoặc quá thời gian phản hồi.');
                 });
             }}
           >
