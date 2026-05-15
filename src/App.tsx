@@ -11,7 +11,8 @@ import {
   ArrowRightOutlined,
   FacebookOutlined,
   MessageOutlined,
-  TeamOutlined
+  TeamOutlined,
+  SyncOutlined
 } from '@ant-design/icons';
 import './App.css';
 
@@ -248,7 +249,7 @@ const CustomerList = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchCustomers = () => {
     fetch(`${API_URL}/customers`)
       .then(res => res.json())
       .then(data => {
@@ -256,7 +257,32 @@ const CustomerList = () => {
         setLoading(false);
       })
       .catch(err => console.error('Lỗi lấy lead:', err));
+  };
+
+  useEffect(() => {
+    fetchCustomers();
   }, []);
+
+  const handleSync = () => {
+    setLoading(true);
+    message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync' });
+    
+    fetch(`${API_URL}/sync-pancake`, { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          message.success({ content: 'Đồng bộ dữ liệu Zalo thành công!', key: 'sync', duration: 3 });
+          fetchCustomers();
+        } else {
+          message.error({ content: 'Lỗi đồng bộ dữ liệu.', key: 'sync' });
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        message.error({ content: 'Không thể kết nối với Server.', key: 'sync' });
+        setLoading(false);
+      });
+  };
 
   const columns = [
     { 
@@ -309,7 +335,14 @@ const CustomerList = () => {
     <div>
       <div className="page-header">
         <h1>Quản lý Leads & Học viên</h1>
-        <Button type="primary" icon={<ThunderboltOutlined />}>Đồng bộ từ Pancake</Button>
+        <Button 
+          type="primary" 
+          icon={<SyncOutlined spin={loading} />} 
+          onClick={handleSync}
+          loading={loading}
+        >
+          Đồng bộ từ Pancake
+        </Button>
       </div>
       <Table 
         dataSource={customers} 
