@@ -8,7 +8,6 @@ import {
   ThunderboltOutlined, 
   RocketOutlined, 
   CustomerServiceOutlined,
-  DollarOutlined,
   ArrowRightOutlined,
   FacebookOutlined,
   MessageOutlined
@@ -105,14 +104,12 @@ const HomePage = () => (
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${API_URL}/courses`)
       .then(res => res.json())
       .then(data => {
         setCourses(data);
-        setLoading(false);
       })
       .catch(err => console.error('Lỗi lấy khóa học:', err));
   }, []);
@@ -161,7 +158,7 @@ const CoursesPage = () => {
                <Tag color="purple">SaaS</Tag>
             </div>
             <Title level={4} style={{ marginBottom: 8 }}>{course.title}</Title>
-            <Text type="secondary" ellipsis={{ rows: 2 }}>{course.description || 'Học tập chuyên sâu với lộ trình bài bản từ chuyên gia đầu ngành.'}</Text>
+            <Typography.Paragraph type="secondary" ellipsis={{ rows: 2 }}>{course.description || 'Học tập chuyên sâu với lộ trình bài bản từ chuyên gia đầu ngành.'}</Typography.Paragraph>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
               <Title level={4} style={{ margin: 0, color: '#2563eb' }}>{Number(course.price).toLocaleString()}đ</Title>
               <Button type="primary" onClick={() => handleConsult(course.title)} icon={<ArrowRightOutlined />}>
