@@ -102,7 +102,9 @@ app.post('/api/pancake-webhook', async (req, res) => {
   const finalContent = message_content || content || 'Tin nhắn mới';
 
   try {
-    // 2. Lưu hoặc cập nhật khách hàng vào DB (Chống trùng lặp bằng cách cập nhật)
+    addLog(`⏳ Đang xử lý khách hàng: ${customerName}...`);
+    
+    // 2. Lưu hoặc cập nhật khách hàng vào DB
     const customerResult = await pool.query(
       `INSERT INTO customers (full_name, phone, source, lead_status) 
        VALUES ($1, $2, $3, $4) 
@@ -113,6 +115,7 @@ app.post('/api/pancake-webhook', async (req, res) => {
     );
 
     const customerId = customerResult.rows[0].id;
+    addLog(`✅ Đã xác định ID khách hàng: ${customerId}`);
 
     // 3. Lưu hoạt động vào DB
     await pool.query(
@@ -120,10 +123,10 @@ app.post('/api/pancake-webhook', async (req, res) => {
       [customerId, 'PANCAKE_EVENT', `Sự kiện ${type || 'SYNC'} từ Pancake: ${finalContent}`, JSON.stringify(req.body)]
     );
 
-    addLog(`✅ Đã lưu khách hàng thành công: ${customerName}`);
-    res.json({ success: true, message: 'Đã đồng bộ từ Pancake thành công' });
+    addLog(`🚀 Hoàn tất Webhook cho: ${customerName}`);
+    res.json({ success: true });
   } catch (err) {
-    addLog('❌ Lỗi lưu Webhook vào DB', err.message);
+    addLog('❌ Lỗi xử lý Webhook', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
 });
