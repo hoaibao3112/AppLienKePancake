@@ -283,7 +283,7 @@ const CustomerList = () => {
 
   const handleSync = () => {
     setLoading(true);
-    const syncMsg = message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync', duration: 0 });
+    message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync', duration: 0 });
     
     // Safety timer: Sau 15 giây tự động tắt loading nếu server treo
     const timer = setTimeout(() => {
@@ -446,7 +446,7 @@ const SystemLogPage = () => {
                     Modal.error({ title: 'Lỗi kết nối Database', content: data.error });
                   }
                 })
-                .catch(err => {
+                .catch(() => {
                   hide();
                   message.error('Không thể gọi API kiểm tra.');
                 });
