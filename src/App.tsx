@@ -15,7 +15,7 @@ import {
 import './App.css';
 
 const { Title, Text } = Typography;
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 // --- LAYOUTS ---
 const MainLayout = ({ children }: { children: React.ReactNode }) => (
