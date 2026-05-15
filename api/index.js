@@ -136,7 +136,7 @@ app.all('/api/sync-pancake', async (req, res) => {
   addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
   
   try {
-    const PAGE_ID = 'pzl_2143756144464796602';
+    const PAGE_ID = process.env.PANCAKE_PAGE_ID || 'pzl_84374170367';
     let response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
     let resultData = await response.json();
     
