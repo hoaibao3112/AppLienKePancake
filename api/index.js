@@ -64,24 +64,43 @@ app.post('/api/consultation', async (req, res) => {
 
 // 4. Endpoint NHẬN DỮ LIỆU TỪ PANCAKE (Webhook)
 app.post('/api/pancake-webhook', async (req, res) => {
-  const { name, phone, email, source_type, message_content } = req.body;
+  console.log('--- NHẬN DỮ LIỆU WEBHOOK ---');
+  console.log('Payload:', JSON.stringify(req.body));
+
+  const { 
+    name, 
+    customer_name, 
+    phone, 
+    customer_phone,
+    email, 
+    source_type, 
+    message_content,
+    content
+  } = req.body;
   
+  // Ưu tiên lấy tên từ nhiều nguồn khác nhau của Pancake/Zalo
+  const finalName = name || customer_name || 'Khách hàng Zalo/FB';
+  const finalPhone = phone || customer_phone || '';
+  const finalSource = source_type || 'pancake';
+  const finalContent = message_content || content || 'Tin nhắn mới';
+
   try {
     const result = await pool.query(
       'INSERT INTO customers (full_name, email, phone, source, lead_status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [name, email || '', phone, `pancake_${source_type}`, 'NEW']
+      [finalName, email || '', finalPhone, `pancake_${finalSource}`, 'NEW']
     );
     
     const customer = result.rows[0];
 
     await pool.query(
       'INSERT INTO customer_activities (customer_id, activity_type, description, metadata) VALUES ($1, $2, $3, $4)',
-      [customer.id, 'PANCAKE_SYNC', `Đồng bộ từ Pancake: ${message_content}`, JSON.stringify(req.body)]
+      [customer.id, 'PANCAKE_SYNC', `Đồng bộ từ Pancake: ${finalContent}`, JSON.stringify(req.body)]
     );
 
+    console.log(`✅ Đã lưu khách hàng: ${finalName}`);
     res.json({ success: true, message: 'Đã đồng bộ từ Pancake thành công' });
   } catch (err) {
-    console.error('Lỗi Webhook:', err);
+    console.error('❌ Lỗi Webhook:', err.message);
     res.status(500).json({ error: 'Lỗi đồng bộ' });
   }
 });
