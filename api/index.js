@@ -14,6 +14,26 @@ const pool = new Pool({
 
 const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InB6bF8yMTQzNzU2MTQ0NDY0Nzk2NjAyIiwidGltZXN0YW1wIjoxNzc4ODM0ODc5fQ.-yr9Mpd4dS-377wOtR_kPbeg3WF4mEKXy2WkMgBdjL8';
 
+// --- DATABASE INITIALIZATION ---
+const initDB = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS courses (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        price NUMERIC DEFAULT 0,
+        level TEXT DEFAULT 'Basic',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Database initialized: courses table ready.');
+  } catch (err) {
+    console.error('❌ Database init error:', err);
+  }
+};
+initDB();
+
 // Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
 let systemLogs = [];
 
