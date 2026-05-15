@@ -184,7 +184,13 @@ app.all('/api/sync-pancake', async (req, res) => {
   
   try {
     const PAGE_ID = process.env.PANCAKE_PAGE_ID || 'pzl_84374170367';
-    let response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 giây timeout
+
+    let response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
     let resultData = await response.json();
     
     // Nếu lỗi Invalid Access Token với Page ID, thử dùng endpoint chung

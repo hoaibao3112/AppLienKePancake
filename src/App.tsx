@@ -262,13 +262,19 @@ const CustomerList = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchCustomers = () => {
+    setLoading(true);
     fetch(`${API_URL}/customers`)
       .then(res => res.json())
       .then(data => {
-        setCustomers(data);
+        if (Array.isArray(data)) {
+          setCustomers(data);
+        }
         setLoading(false);
       })
-      .catch(err => console.error('Lỗi lấy lead:', err));
+      .catch(err => {
+        console.error('Lỗi lấy lead:', err);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -277,20 +283,21 @@ const CustomerList = () => {
 
   const handleSync = () => {
     setLoading(true);
-    message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync' });
+    const syncMsg = message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync', duration: 0 });
     
     fetch(`${API_URL}/sync-pancake`, { method: 'POST' })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          message.success({ content: 'Đồng bộ dữ liệu Zalo thành công!', key: 'sync', duration: 3 });
+          message.success({ content: data.message || 'Đồng bộ thành công!', key: 'sync', duration: 3 });
           fetchCustomers();
         } else {
-          message.error({ content: 'Lỗi đồng bộ dữ liệu.', key: 'sync' });
+          message.error({ content: data.error || 'Lỗi đồng bộ dữ liệu.', key: 'sync' });
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Sync error:', err);
         message.error({ content: 'Không thể kết nối với Server.', key: 'sync' });
         setLoading(false);
       });
