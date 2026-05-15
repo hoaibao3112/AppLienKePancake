@@ -48,17 +48,27 @@ initDB();
 // Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
 let systemLogs = [];
 
-function addLog(message, details = null) {
+function addLog(message, data = null) {
   const log = {
     id: Date.now(),
     time: new Date().toLocaleString('vi-VN'),
     message,
-    details
+    data
   };
   systemLogs.unshift(log);
   if (systemLogs.length > 50) systemLogs.pop();
-  console.log(`[LOG] ${message}`, details || '');
+  console.log(`[LOG] ${message}`, data || '');
 }
+
+// 0. Kiểm tra kết nối DB
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({ success: true, time: result.rows[0].now });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 // --- API ENDPOINTS ---
 
 // 1. Lấy danh sách khách hàng (Leads)

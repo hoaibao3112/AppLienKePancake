@@ -285,9 +285,16 @@ const CustomerList = () => {
     setLoading(true);
     const syncMsg = message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync', duration: 0 });
     
+    // Safety timer: Sau 15 giây tự động tắt loading nếu server treo
+    const timer = setTimeout(() => {
+      setLoading(false);
+      message.warning({ content: 'Quá thời gian phản hồi, vui lòng thử lại.', key: 'sync' });
+    }, 15000);
+
     fetch(`${API_URL}/sync-pancake`, { method: 'POST' })
       .then(res => res.json())
       .then(data => {
+        clearTimeout(timer);
         if (data.success) {
           message.success({ content: data.message || 'Đồng bộ thành công!', key: 'sync', duration: 3 });
           fetchCustomers();
@@ -297,6 +304,7 @@ const CustomerList = () => {
         }
       })
       .catch((err) => {
+        clearTimeout(timer);
         console.error('Sync error:', err);
         message.error({ content: 'Không thể kết nối với Server.', key: 'sync' });
         setLoading(false);
@@ -423,7 +431,31 @@ const SystemLogPage = () => {
     <div>
       <div className="page-header">
         <h1>Nhật ký hệ thống (Real-time)</h1>
-        <Button onClick={() => setLogs([])} icon={<RocketOutlined />}>Xóa nhật ký tạm</Button>
+        <Space>
+          <Button 
+            icon={<ThunderboltOutlined />} 
+            onClick={() => {
+              const hide = message.loading('Đang kiểm tra kết nối...', 0);
+              fetch(`${API_URL}/test-db`)
+                .then(res => res.json())
+                .then(data => {
+                  hide();
+                  if (data.success) {
+                    message.success(`Kết nối Database thành công! Thời gian: ${data.time}`);
+                  } else {
+                    Modal.error({ title: 'Lỗi kết nối Database', content: data.error });
+                  }
+                })
+                .catch(err => {
+                  hide();
+                  message.error('Không thể gọi API kiểm tra.');
+                });
+            }}
+          >
+            Kiểm tra kết nối DB
+          </Button>
+          <Button onClick={() => setLogs([])} icon={<RocketOutlined />}>Xóa nhật ký tạm</Button>
+        </Space>
       </div>
       <Card style={{ borderRadius: 16 }}>
         <List
