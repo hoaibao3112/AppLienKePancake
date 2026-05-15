@@ -12,24 +12,22 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN;
+const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InB6bF8yMTQzNzU2MTQ0NDY0Nzk2NjAyIiwidGltZXN0YW1wIjoxNzc4ODM0ODc5fQ.-yr9Mpd4dS-377wOtR_kPbeg3WF4mEKXy2WkMgBdjL8';
 
 // Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
 let systemLogs = [];
-const addLog = (message, data = null) => {
-  const logEntry = {
+
+function addLog(message, details = null) {
+  const log = {
     id: Date.now(),
     time: new Date().toLocaleString('vi-VN'),
     message,
-    data
+    details
   };
-  systemLogs.unshift(logEntry);
+  systemLogs.unshift(log);
   if (systemLogs.length > 50) systemLogs.pop();
-};
-
-app.use(cors());
-app.use(express.json());
-
+  console.log(`[LOG] ${message}`, details || '');
+}
 // --- API ENDPOINTS ---
 
 // 1. Lấy danh sách khách hàng (Leads)
@@ -135,18 +133,22 @@ app.all('/api/sync-pancake', async (req, res) => {
   addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
   
   try {
-    // Gọi API chính xác của Pancake dành cho trang Zalo của bạn
     const PAGE_ID = 'pzl_2143756144464796602';
-    const response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
-    const resultData = await response.json();
+    let response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`);
+    let resultData = await response.json();
     
-    // Pancake API đôi khi trả về conversations ở root, đôi khi ở trong resultData.data
+    // Nếu lỗi Invalid Access Token với Page ID, thử dùng endpoint chung
+    if (resultData.error_code === 102) {
+      addLog('⚠️ Thử endpoint dự phòng (Global conversations)...');
+      response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`);
+      resultData = await response.json();
+    }
+    
     const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || [];
-    
-    addLog(`🔍 Tìm thấy ${conversations.length} hội thoại trên Pancake.`, resultData);
+    addLog(`🔍 Kết quả: Tìm thấy ${conversations.length} hội thoại.`, resultData);
 
     if (conversations.length === 0) {
-      return res.json({ success: true, message: 'Không tìm thấy khách hàng mới.' });
+      return res.json({ success: true, message: 'Hệ thống Pancake báo: Không có hội thoại mới.' });
     }
 
     // Duyệt qua danh sách và lưu vào DB
