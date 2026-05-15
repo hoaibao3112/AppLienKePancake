@@ -41,10 +41,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="admin-dashboard">
-      <aside className="admin-sidebar">
+      <aside className="admin-sidebar" style={{ background: '#001529', borderRight: '1px solid #1e293b' }}>
         <div className="sidebar-logo">
           <RocketOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
-          <span>PANCAKE CRM</span>
+          <span>PANCAKE CRM v2</span>
         </div>
         <Menu
           mode="inline"

@@ -125,7 +125,7 @@ app.post('/api/pancake-webhook', async (req, res) => {
 });
 
 // 5. Endpoint ĐỒNG BỘ CHỦ ĐỘNG (Dùng Token để kéo dữ liệu)
-app.post('/api/sync-pancake', async (req, res) => {
+app.all('/api/sync-pancake', async (req, res) => {
   addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
   
   try {
