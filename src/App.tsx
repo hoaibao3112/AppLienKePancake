@@ -65,7 +65,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         </Menu>
         <div style={{ padding: '0 32px', marginTop: 'auto', paddingBottom: '32px' }}>
           <Card size="small" style={{ background: 'rgba(255,255,255,0.05)', border: 'none' }}>
-            <Text style={{ color: '#94a3b8', fontSize: '12px' }}>Đang kết nối với</Text>
+            <Space align="center" size={4}>
+              <div style={{ width: 6, height: 6, background: '#10b981', borderRadius: '50%', boxShadow: '0 0 8px #10b981' }}></div>
+              <Text style={{ color: '#94a3b8', fontSize: '12px' }}>Đã kết nối với</Text>
+            </Space>
             <div style={{ color: 'white', fontWeight: 600 }}>Neon Database</div>
           </Card>
         </div>
