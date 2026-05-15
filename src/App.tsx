@@ -9,16 +9,12 @@ import {
   RocketOutlined, 
   CustomerServiceOutlined,
   ArrowRightOutlined,
-  FacebookOutlined,
-  MessageOutlined,
   TeamOutlined,
   SyncOutlined
 } from '@ant-design/icons';
 import './App.css';
 
 const { Title, Text } = Typography;
-const { Statistic } = Card as any; // Trick to use Statistic from antd Card if not imported directly
-import { Statistic as AntStatistic } from 'antd'; // More standard way
 const API_URL = '/api';
 
 // --- LAYOUTS ---
