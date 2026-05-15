@@ -91,36 +91,42 @@ app.post('/api/pancake-webhook', async (req, res) => {
     customer_name, 
     phone, 
     customer_phone,
-    email, 
     source_type, 
     message_content,
-    content
+    content,
+    type 
   } = req.body;
   
   // Ưu tiên lấy tên từ nhiều nguồn khác nhau của Pancake/Zalo
-  const finalName = name || customer_name || 'Khách hàng Zalo/FB';
-  const finalPhone = phone || customer_phone || '';
-  const finalSource = source_type || 'pancake';
+  const customerName = name || customer_name || 'Khách hàng Zalo/FB';
+  const customerPhone = phone || customer_phone || '';
+  const sourceType = source_type || 'pancake';
   const finalContent = message_content || content || 'Tin nhắn mới';
 
   try {
-    const result = await pool.query(
-      'INSERT INTO customers (full_name, email, phone, source, lead_status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [finalName, email || '', finalPhone, `pancake_${finalSource}`, 'NEW']
+    // 2. Lưu hoặc cập nhật khách hàng vào DB (Chống trùng lặp bằng cách cập nhật)
+    const customerResult = await pool.query(
+      `INSERT INTO customers (full_name, phone, source, lead_status) 
+       VALUES ($1, $2, $3, $4) 
+       ON CONFLICT (full_name, source) 
+       DO UPDATE SET phone = EXCLUDED.phone, updated_at = NOW()
+       RETURNING id`,
+      [customerName, customerPhone, `pancake_${sourceType}`, 'NEW']
     );
-    
-    const customer = result.rows[0];
 
+    const customerId = customerResult.rows[0].id;
+
+    // 3. Lưu hoạt động vào DB
     await pool.query(
       'INSERT INTO customer_activities (customer_id, activity_type, description, metadata) VALUES ($1, $2, $3, $4)',
-      [customer.id, 'PANCAKE_SYNC', `Đồng bộ từ Pancake: ${finalContent}`, JSON.stringify(req.body)]
+      [customerId, 'PANCAKE_EVENT', `Sự kiện ${type || 'SYNC'} từ Pancake: ${finalContent}`, JSON.stringify(req.body)]
     );
 
-    addLog(`✅ Đã lưu khách hàng thành công: ${finalName}`);
+    addLog(`✅ Đã lưu khách hàng thành công: ${customerName}`);
     res.json({ success: true, message: 'Đã đồng bộ từ Pancake thành công' });
   } catch (err) {
     addLog('❌ Lỗi lưu Webhook vào DB', err.message);
-    res.status(500).json({ error: 'Lỗi đồng bộ' });
+    res.status(500).json({ error: 'Lỗi server' });
   }
 });
 
