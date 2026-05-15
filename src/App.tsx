@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge } from 'antd';
+import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge, Menu } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
@@ -10,7 +10,8 @@ import {
   CustomerServiceOutlined,
   ArrowRightOutlined,
   FacebookOutlined,
-  MessageOutlined
+  MessageOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import './App.css';
 
@@ -36,7 +37,6 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => (
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const activeKey = location.pathname;
 
   return (
     <div className="admin-dashboard">
