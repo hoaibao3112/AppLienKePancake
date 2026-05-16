@@ -21,7 +21,15 @@ let isDbInitialized = false;
 app.use(cors());
 app.use(express.json());
 
-const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InB6bF8yMTQzNzU2MTQ0NDY0Nzk2NjAyIiwidGltZXN0YW1wIjoxNzc4ODM0ODc5fQ.-yr9Mpd4dS-377wOtR_kPbeg3WF4mEKXy2WkMgBdjL8';
+const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN;
+const PAGE_ID = process.env.PANCAKE_PAGE_ID || 'pzl_84374170367';
+
+// Kiểm tra Token khi khởi động
+if (!PANCAKE_TOKEN) {
+  console.error('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình trong Environment Variables!');
+} else {
+  console.log(`✅ Đã nhận Token Pancake (Bắt đầu bằng: ${PANCAKE_TOKEN.substring(0, 5)}...)`);
+}
 
 // --- DATABASE INITIALIZATION ---
 const initDB = async () => {
