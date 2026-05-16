@@ -319,12 +319,13 @@ const CustomerList = () => {
     { 
       title: 'Học viên', 
       key: 'user',
+      width: 250,
       render: (record: any) => (
-        <Space>
+        <Space align="start">
           <Avatar icon={<UserOutlined />} />
-          <div>
-            <Text strong>{record.full_name}</Text>
-            <br/><Text type="secondary" style={{ fontSize: 12 }}>{record.email || 'Chưa cập nhật email'}</Text>
+          <div style={{ minWidth: 150 }}>
+            <div style={{ fontWeight: 'bold', lineHeight: '1.2' }}>{record.full_name}</div>
+            <div style={{ color: '#8c8c8c', fontSize: '12px' }}>{record.email || 'Chưa cập nhật email'}</div>
           </div>
         </Space>
       )

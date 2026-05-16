@@ -286,7 +286,8 @@ app.all('/api/sync-pancake', async (req, res) => {
     }
     
     const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || resultData.data || [];
-    addLog(`🔍 Tìm thấy ${conversations.length} hội thoại từ API.`, conversations.map(c => c.customer_name || c.name));
+    addLog(`🔍 Debug Sync: Tìm thấy ${conversations.length} items. Dữ liệu thô: ${JSON.stringify(resultData).substring(0, 500)}...`);
+    addLog(`👥 Danh sách tên:`, conversations.map(c => c.customer_name || c.name || 'Unknown'));
 
     if (conversations.length === 0) {
       return res.json({ success: true, message: 'Hệ thống Pancake báo: Không có hội thoại mới hoặc Token không có quyền truy cập hội thoại này.' });
