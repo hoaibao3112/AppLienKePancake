@@ -29,7 +29,8 @@ const checkToken = async () => {
   if (!PANCAKE_TOKEN) {
     await addLog('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình trên Vercel!');
   } else {
-    await addLog(`✅ Hệ thống đang dùng Token bắt đầu bằng: "${PANCAKE_TOKEN.substring(0, 5)}..."`);
+    // Hiện 15 ký tự để bạn dễ so sánh với Token mới
+    await addLog(`✅ Token đang dùng: "${PANCAKE_TOKEN.substring(0, 15)}..."`);
   }
 };
 checkToken();
