@@ -293,11 +293,11 @@ const CustomerList = () => {
     setLoading(true);
     message.loading({ content: 'Đang kết nối với Pancake API...', key: 'sync', duration: 0 });
     
-    // Safety timer: Sau 15 giây tự động tắt loading nếu server treo
+    // Safety timer: Sau 30 giây tự động tắt loading nếu server treo
     const timer = setTimeout(() => {
       setLoading(false);
-      message.warning({ content: 'Quá thời gian phản hồi, vui lòng thử lại.', key: 'sync' });
-    }, 15000);
+      message.warning({ content: 'Hệ thống đang khởi động Database, vui lòng đợi trong giây lát...', key: 'sync' });
+    }, 30000);
 
     fetch(`${API_URL}/sync-pancake`, { method: 'POST' })
       .then(res => res.json())
@@ -505,7 +505,7 @@ const CourseAdminPage = () => {
   const fetchCourses = () => {
     setLoading(true);
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 30000);
 
     fetch(`${API_URL}/courses`, { signal: controller.signal })
       .then(res => {
