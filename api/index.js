@@ -143,7 +143,7 @@ app.get('/api/test-db', async (req, res) => {
 // 1. Lấy danh sách khách hàng (Leads)
 app.get('/api/customers', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM customers ORDER BY created_at DESC');
+    const result = await pool.query('SELECT * FROM customers ORDER BY updated_at DESC');
     res.json(result.rows);
   } catch (err) {
     addLog('Lỗi lấy khách hàng', err.message);
@@ -281,28 +281,32 @@ app.all('/api/sync-pancake', async (req, res) => {
       resultData = await response.json();
     }
     
-    const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || [];
-    addLog(`🔍 Kết quả: Tìm thấy ${conversations.length} hội thoại.`, resultData);
+    const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || resultData.data || [];
+    addLog(`🔍 Tìm thấy ${conversations.length} hội thoại từ API.`, conversations.map(c => c.customer_name || c.name));
 
     if (conversations.length === 0) {
-      return res.json({ success: true, message: 'Hệ thống Pancake báo: Không có hội thoại mới.' });
+      return res.json({ success: true, message: 'Hệ thống Pancake báo: Không có hội thoại mới hoặc Token không có quyền truy cập hội thoại này.' });
     }
 
     // Duyệt qua danh sách và lưu vào DB
     let count = 0;
     for (const conv of conversations) {
-      const customerName = conv.customer_name || conv.name || 'Khách hàng Zalo';
-      const customerPhone = conv.customer_phone || '';
+      // Lấy tên từ nhiều trường khác nhau mà Pancake có thể trả về
+      const customerName = conv.customer_name || conv.name || conv.customer?.name || 'Khách hàng Zalo';
+      const customerPhone = conv.customer_phone || conv.phone || '';
+      const customerId = conv.customer_id || conv.id;
       
+      addLog(`Processing: ${customerName} (ID: ${customerId})`);
+
       // ON CONFLICT DO NOTHING sẽ tự động bỏ qua nếu người này đã có trong danh sách
       await pool.query(
-        'INSERT INTO customers (full_name, phone, source, lead_status) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+        'INSERT INTO customers (full_name, phone, source, lead_status) VALUES ($1, $2, $3, $4) ON CONFLICT (full_name, source) DO UPDATE SET updated_at = NOW(), phone = EXCLUDED.phone',
         [customerName, customerPhone, 'pancake_zalo', 'NEW']
       );
       count++;
     }
 
-    addLog(`✅ Đã đồng bộ thành công ${count} khách hàng từ Pancake.`);
+    addLog(`✅ Đã đồng bộ/cập nhật thành công ${count} khách hàng.`);
     res.json({ success: true, message: `Đã đồng bộ ${count} khách hàng!` });
   } catch (err) {
     addLog('❌ Lỗi khi kết nối với Pancake API', err.message);
