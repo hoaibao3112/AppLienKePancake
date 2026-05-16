@@ -25,11 +25,14 @@ const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN;
 const PAGE_ID = process.env.PANCAKE_PAGE_ID || 'pzl_84374170367';
 
 // Kiểm tra Token khi khởi động
-if (!PANCAKE_TOKEN) {
-  console.error('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình trong Environment Variables!');
-} else {
-  console.log(`✅ Đã nhận Token Pancake (Bắt đầu bằng: ${PANCAKE_TOKEN.substring(0, 5)}...)`);
-}
+const checkToken = async () => {
+  if (!PANCAKE_TOKEN) {
+    await addLog('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình trên Vercel!');
+  } else {
+    await addLog(`✅ Hệ thống đang dùng Token bắt đầu bằng: "${PANCAKE_TOKEN.substring(0, 5)}..."`);
+  }
+};
+checkToken();
 
 // --- DATABASE INITIALIZATION ---
 const initDB = async () => {
