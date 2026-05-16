@@ -367,11 +367,14 @@ app.all('/api/sync-pancake', async (req, res) => {
 
     const PURE_PAGE_ID = CURRENT_PAGE_ID.replace('pzl_', ''); // Thử ID chỉ có số
     
-    // Danh sách các phương án thử gọi API
+    // Danh sách các phương án thử gọi API (Mở rộng thêm các kiểu Header và Domain)
     const strategies = [
-      { url: `https://pages.pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
+      { url: `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
       { url: `https://pancake.vn/api/v1/pages/${CURRENT_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
+      { url: `https://pages.pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
+      { url: `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations`, method: 'GET', headers: { 'Authorization': `Bearer ${CURRENT_TOKEN}` } },
       { url: `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations`, method: 'GET', headers: { 'x-access-token': CURRENT_TOKEN } },
+      { url: `https://pos.pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
       { url: `https://pancake.vn/api/v1/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' }
     ];
 
