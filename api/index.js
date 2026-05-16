@@ -306,24 +306,51 @@ app.all('/api/sync-pancake', async (req, res) => {
   addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
   
   try {
-    const PAGE_ID = process.env.PANCAKE_PAGE_ID || 'pzl_84374170367';
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 giây timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    let response = await fetch(`https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`, {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    let resultData = await response.json();
+    const PURE_PAGE_ID = PAGE_ID.replace('pzl_', ''); // Thử ID chỉ có số
     
-    // Nếu lỗi Invalid Access Token
-    if (resultData.error_code === 102 || resultData.success === false) {
-      addLog('❌ Lỗi Pancake API: Token không hợp lệ hoặc đã hết hạn.', resultData);
-      return res.json({ success: false, error: 'Token Pancake đã hết hạn. Vui lòng lấy Token mới và cập nhật vào Vercel.' });
+    // Danh sách các phương án thử gọi API
+    const strategies = [
+      `https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`,
+      `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`,
+      `https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`
+    ];
+
+    let resultData = null;
+    let successStrategy = -1;
+
+    for (let i = 0; i < strategies.length; i++) {
+      try {
+        addLog(`📡 Thử phương án ${i + 1}...`);
+        const response = await fetch(strategies[i], { 
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await response.json();
+        
+        if (data.success !== false && !data.error_code) {
+          resultData = data;
+          successStrategy = i;
+          break;
+        } else if (i === strategies.length - 1) {
+          resultData = data; // Lưu lỗi cuối cùng để báo cáo
+        }
+      } catch (e) {
+        addLog(`⚠️ Phương án ${i + 1} thất bại: ${e.message}`);
+      }
+    }
+
+    clearTimeout(timeoutId);
+
+    if (!resultData || resultData.success === false || resultData.error_code === 102) {
+      addLog('❌ Tất cả phương án đồng bộ đều thất bại do Token lỗi.', resultData);
+      return res.json({ success: false, error: 'Token Pancake đã hết hạn hoặc sai Page ID. Vui lòng kiểm tra lại.' });
     }
 
     const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || resultData.data || [];
-    addLog(`🔍 Debug Sync: Tìm thấy ${conversations.length} items. Dữ liệu thô: ${JSON.stringify(resultData).substring(0, 500)}...`);
+    addLog(`🔍 Thành công (PA ${successStrategy + 1}): Tìm thấy ${conversations.length} hội thoại.`);
     addLog(`👥 Danh sách tên:`, conversations.map(c => c.customer_name || c.name || 'Unknown'));
 
     if (conversations.length === 0) {
