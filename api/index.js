@@ -303,7 +303,8 @@ app.post('/api/pancake-webhook', async (req, res) => {
 
 // 5. Endpoint ĐỒNG BỘ CHỦ ĐỘNG (Dùng Token để kéo dữ liệu)
 app.all('/api/sync-pancake', async (req, res) => {
-  addLog('🔄 Bắt đầu đồng bộ chủ động từ Pancake...');
+  const tokenPrefix = (PANCAKE_TOKEN || '').substring(0, 15);
+  addLog(`🔄 Bắt đầu đồng bộ với Token: "${tokenPrefix}..." và Page ID: "${PAGE_ID}"`);
   
   try {
     const controller = new AbortController();
