@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge, Menu, List, Modal, Form, Input, InputNumber, Select } from 'antd';
 import { 
@@ -494,14 +494,29 @@ const CourseAdminPage = () => {
 
   const fetchCourses = () => {
     setLoading(true);
-    fetch(`${API_URL}/courses`)
-      .then(res => res.json())
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+    fetch(`${API_URL}/courses`, { signal: controller.signal })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
-        setCourses(data);
-        setLoading(false);
+        setCourses(Array.isArray(data) ? data : []);
       })
       .catch(err => {
         console.error('Lỗi lấy khóa học:', err);
+        if (err?.name === 'AbortError') {
+          message.error('Tải dữ liệu khóa học quá lâu. Vui lòng thử lại.');
+        } else {
+          message.error('Không thể tải danh sách khóa học.');
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
         setLoading(false);
       });
   };

@@ -10,8 +10,13 @@ const port = process.env.PORT || 5000;
 // Cấu hình kết nối Postgres (Neon.tech)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 5000, // Timeout sau 5 giây nếu không kết nối được
+  connectionTimeoutMillis: 10000, // Tăng lên 10 giây cho cold start
+  ssl: {
+    rejectUnauthorized: false // Cần thiết cho Neon/Supabase trên Vercel
+  }
 });
+
+let isDbInitialized = false;
 
 app.use(cors());
 app.use(express.json());
@@ -22,6 +27,8 @@ const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsI
 const initDB = async () => {
   try {
     addLog('⏳ Đang kiểm tra cấu trúc Database...');
+    
+    // 1. Tạo bảng courses
     await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
@@ -33,18 +40,79 @@ const initDB = async () => {
       )
     `);
     
-    // Thêm từng cột nếu chưa có (Migration)
+    // 2. Tạo bảng customers với Unique Constraint
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        full_name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        source TEXT NOT NULL,
+        lead_status TEXT DEFAULT 'NEW',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(full_name, source)
+      )
+    `);
+
+    // 3. Tạo bảng customer_activities
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customer_activities (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id),
+        activity_type TEXT,
+        description TEXT,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    
+    // Migration cho các cột cũ (nếu có)
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT');
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0');
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS level TEXT DEFAULT ' + "'Basic'");
     
-    addLog('✅ Database initialized: courses table ready.');
+    isDbInitialized = true;
+    addLog('✅ Database initialized: All tables ready.');
   } catch (err) {
     addLog('❌ Database init error', err.message);
     console.error('❌ Database init error:', err);
   }
 };
-initDB();
+
+// Middleware để đảm bảo DB luôn được khởi tạo trước khi xử lý request
+const ensureDb = async (req, res, next) => {
+  if (!isDbInitialized && process.env.DATABASE_URL) {
+    await initDB();
+  }
+  next();
+};
+
+app.use(ensureDb);
+
+// 0. Kiểm tra trạng thái hệ thống
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'disconnected';
+  try {
+    if (process.env.DATABASE_URL) {
+      await pool.query('SELECT 1');
+      dbStatus = 'connected';
+    }
+  } catch (err) {
+    dbStatus = 'error: ' + err.message;
+  }
+
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    database: dbStatus,
+    config: {
+      has_token: !!process.env.PANCAKE_ACCESS_TOKEN,
+      has_page_id: !!process.env.PANCAKE_PAGE_ID
+    }
+  });
+});
 
 // Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
 let systemLogs = [];
@@ -207,7 +275,9 @@ app.all('/api/sync-pancake', async (req, res) => {
     // Nếu lỗi Invalid Access Token với Page ID, thử dùng endpoint chung
     if (resultData.error_code === 102) {
       addLog('⚠️ Thử endpoint dự phòng (Global conversations)...');
-      response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`);
+      response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`, {
+        signal: controller.signal
+      });
       resultData = await response.json();
     }
     
