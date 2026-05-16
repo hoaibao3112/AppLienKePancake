@@ -304,15 +304,12 @@ app.all('/api/sync-pancake', async (req, res) => {
     clearTimeout(timeoutId);
     let resultData = await response.json();
     
-    // Nếu lỗi Invalid Access Token với Page ID, thử dùng endpoint chung
-    if (resultData.error_code === 102) {
-      addLog('⚠️ Thử endpoint dự phòng (Global conversations)...');
-      response = await fetch(`https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`, {
-        signal: controller.signal
-      });
-      resultData = await response.json();
+    // Nếu lỗi Invalid Access Token
+    if (resultData.error_code === 102 || resultData.success === false) {
+      addLog('❌ Lỗi Pancake API: Token không hợp lệ hoặc đã hết hạn.', resultData);
+      return res.json({ success: false, error: 'Token Pancake đã hết hạn. Vui lòng lấy Token mới và cập nhật vào Vercel.' });
     }
-    
+
     const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || resultData.data || [];
     addLog(`🔍 Debug Sync: Tìm thấy ${conversations.length} items. Dữ liệu thô: ${JSON.stringify(resultData).substring(0, 500)}...`);
     addLog(`👥 Danh sách tên:`, conversations.map(c => c.customer_name || c.name || 'Unknown'));
