@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge, Menu, List, Modal, Form, Input, InputNumber, Select } from 'antd';
+import { ConfigProvider, Button, Card, Table, Tag, message, Avatar, Space, Typography, Badge, Menu, List, Modal, Form, Input, InputNumber, Select, Alert } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
@@ -10,7 +10,8 @@ import {
   CustomerServiceOutlined,
   ArrowRightOutlined,
   TeamOutlined,
-  SyncOutlined
+  SyncOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
 import './App.css';
 
@@ -61,6 +62,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </Menu.Item>
           <Menu.Item key="/admin/logs" icon={<ThunderboltOutlined />}>
             <Link to="/admin/logs">Nhật ký hệ thống</Link>
+          </Menu.Item>
+          <Menu.Item key="/admin/settings" icon={<SettingOutlined />}>
+            <Link to="/admin/settings">Cấu hình hệ thống</Link>
           </Menu.Item>
         </Menu>
         <div style={{ padding: '0 32px', marginTop: 'auto', paddingBottom: '32px' }}>
@@ -409,6 +413,7 @@ function App() {
           <Route path="/admin/customers" element={<AdminLayout><CustomerList /></AdminLayout>} />
           <Route path="/admin/courses" element={<AdminLayout><CourseAdminPage /></AdminLayout>} />
           <Route path="/admin/logs" element={<AdminLayout><SystemLogPage /></AdminLayout>} />
+          <Route path="/admin/settings" element={<AdminLayout><SettingsPage /></AdminLayout>} />
         </Routes>
       </Router>
     </ConfigProvider>
@@ -629,6 +634,92 @@ const CourseAdminPage = () => {
           </Form.Item>
         </Form>
       </Modal>
+    </div>
+  );
+};
+
+// Component mới cho trang Cấu hình hệ thống
+const SettingsPage = () => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_URL}/configs`)
+      .then(res => res.json())
+      .then(data => {
+        form.setFieldsValue(data);
+      })
+      .catch(err => console.error('Lỗi lấy cấu hình:', err));
+  }, []);
+
+  const onFinish = (values: any) => {
+    setLoading(true);
+    fetch(`${API_URL}/configs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ configs: values }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          message.success('Đã lưu cấu hình thành công!');
+        } else {
+          message.error('Lỗi khi lưu cấu hình.');
+        }
+      })
+      .catch(() => message.error('Không thể kết nối với Server.'))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1>Cấu hình kết nối Pancake</h1>
+        <Text type="secondary">Cập nhật Token và Page ID mà không cần deploy lại code</Text>
+      </div>
+
+      <Card style={{ borderRadius: 16, maxWidth: 800 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+        >
+          <Form.Item
+            name="PANCAKE_ACCESS_TOKEN"
+            label="Pancake Access Token"
+            tooltip="Lấy từ https://pancake.vn/token"
+            rules={[{ required: true, message: 'Vui lòng nhập Token!' }]}
+          >
+            <Input.TextArea rows={4} placeholder="Dán access token vào đây..." />
+          </Form.Item>
+
+          <Form.Item
+            name="PANCAKE_PAGE_ID"
+            label="Pancake Page ID"
+            tooltip="Ví dụ: pzl_2143756144464796602"
+            rules={[{ required: true, message: 'Vui lòng nhập Page ID!' }]}
+          >
+            <Input placeholder="Ví dụ: pzl_84374170367" />
+          </Form.Item>
+
+          <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 24 }}>
+             <Button type="primary" htmlType="submit" loading={loading} icon={<SyncOutlined />}>
+               Lưu cấu hình ngay
+             </Button>
+             <Text type="secondary" style={{ marginLeft: 16 }}>
+                Thay đổi sẽ có hiệu lực ngay lập tức cho lần đồng bộ tiếp theo.
+             </Text>
+          </div>
+        </Form>
+      </Card>
+      
+      <Alert 
+        message="Lưu ý quan trọng"
+        description="Khi bạn lưu ở đây, giá trị sẽ được lưu vào Database và ghi đè lên các giá trị trong file .env hoặc Vercel."
+        type="info"
+        showIcon
+        style={{ marginTop: 24, maxWidth: 800, borderRadius: 12 }}
+      />
     </div>
   );
 };

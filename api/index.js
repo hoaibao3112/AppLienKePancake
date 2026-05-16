@@ -21,18 +21,34 @@ let isDbInitialized = false;
 app.use(cors());
 app.use(express.json());
 
-const PANCAKE_TOKEN = (process.env.PANCAKE_ACCESS_TOKEN || '').trim();
-const PAGE_ID = (process.env.PANCAKE_PAGE_ID || 'pzl_84374170367').trim();
+// --- CONFIG HELPERS ---
+async function getConfig(key, defaultValue = '') {
+  try {
+    const res = await pool.query('SELECT value FROM system_configs WHERE key = $1', [key]);
+    return res.rows.length > 0 ? res.rows[0].value : defaultValue;
+  } catch (err) {
+    return defaultValue;
+  }
+}
+
+async function setConfig(key, value) {
+  await pool.query(
+    'INSERT INTO system_configs (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()',
+    [key, value]
+  );
+}
 
 // Kiểm tra Token khi khởi động
 const checkToken = async () => {
-  if (!PANCAKE_TOKEN) {
-    await addLog('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình trên Vercel!');
+  const dbToken = await getConfig('PANCAKE_ACCESS_TOKEN');
+  const finalToken = dbToken || (process.env.PANCAKE_ACCESS_TOKEN || '').trim();
+  
+  if (!finalToken) {
+    await addLog('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình!');
   } else {
-    // Hiện 15 ký tự đầu và 4 ký tự cuối để bạn dễ so sánh với Token mới
-    const start = PANCAKE_TOKEN.substring(0, 15);
-    const end = PANCAKE_TOKEN.substring(PANCAKE_TOKEN.length - 4);
-    await addLog(`✅ Token đang dùng: "${start}...${end}"`);
+    const start = finalToken.substring(0, 15);
+    const end = finalToken.substring(finalToken.length - 4);
+    await addLog(`✅ Token đang dùng: "${start}...${end}" ${dbToken ? '(Từ DB)' : '(Từ Env)'}`);
   }
 };
 checkToken();
@@ -202,6 +218,37 @@ app.get('/api/logs', async (req, res) => {
   }
 });
 
+// 2. Lấy danh sách cấu hình
+app.get('/api/configs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value, updated_at FROM system_configs');
+    const configs = {};
+    result.rows.forEach(r => { configs[r.key] = r.value; });
+    
+    // Bổ sung các giá trị từ Env nếu DB chưa có
+    if (!configs.PANCAKE_ACCESS_TOKEN) configs.PANCAKE_ACCESS_TOKEN = (process.env.PANCAKE_ACCESS_TOKEN || '').trim();
+    if (!configs.PANCAKE_PAGE_ID) configs.PANCAKE_PAGE_ID = (process.env.PANCAKE_PAGE_ID || 'pzl_84374170367').trim();
+    
+    res.json(configs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2c. Lưu cấu hình
+app.post('/api/configs', async (req, res) => {
+  const { configs } = req.body;
+  try {
+    for (const [key, value] of Object.entries(configs)) {
+      await setConfig(key, value);
+    }
+    addLog('⚙️ Đã cập nhật cấu hình hệ thống qua Dashboard');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 2. Lấy danh sách khóa học
 app.get('/api/courses', async (req, res) => {
   try {
@@ -305,21 +352,27 @@ app.post('/api/pancake-webhook', async (req, res) => {
 
 // 5. Endpoint ĐỒNG BỘ CHỦ ĐỘNG (Dùng Token để kéo dữ liệu)
 app.all('/api/sync-pancake', async (req, res) => {
-  const tokenPrefix = (PANCAKE_TOKEN || '').substring(0, 15);
-  addLog(`🔄 Bắt đầu đồng bộ với Token: "${tokenPrefix}..." và Page ID: "${PAGE_ID}"`);
+  const dbToken = await getConfig('PANCAKE_ACCESS_TOKEN');
+  const dbPageId = await getConfig('PANCAKE_PAGE_ID');
+  
+  const CURRENT_TOKEN = dbToken || (process.env.PANCAKE_ACCESS_TOKEN || '').trim();
+  const CURRENT_PAGE_ID = dbPageId || (process.env.PANCAKE_PAGE_ID || 'pzl_84374170367').trim();
+
+  const tokenPrefix = (CURRENT_TOKEN || '').substring(0, 15);
+  addLog(`🔄 Bắt đầu đồng bộ với Token: "${tokenPrefix}..." và Page ID: "${CURRENT_PAGE_ID}"`);
   
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const PURE_PAGE_ID = PAGE_ID.replace('pzl_', ''); // Thử ID chỉ có số
+    const PURE_PAGE_ID = CURRENT_PAGE_ID.replace('pzl_', ''); // Thử ID chỉ có số
     
     // Danh sách các phương án thử gọi API
     const strategies = [
-      { url: `https://pages.pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`, method: 'GET' },
-      { url: `https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`, method: 'GET' },
-      { url: `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations`, method: 'GET', headers: { 'x-access-token': PANCAKE_TOKEN } },
-      { url: `https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`, method: 'GET' }
+      { url: `https://pages.pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
+      { url: `https://pancake.vn/api/v1/pages/${CURRENT_PAGE_ID}/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' },
+      { url: `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations`, method: 'GET', headers: { 'x-access-token': CURRENT_TOKEN } },
+      { url: `https://pancake.vn/api/v1/conversations?access_token=${CURRENT_TOKEN}`, method: 'GET' }
     ];
 
     let resultData = null;
