@@ -21,8 +21,8 @@ let isDbInitialized = false;
 app.use(cors());
 app.use(express.json());
 
-const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN;
-const PAGE_ID = process.env.PANCAKE_PAGE_ID || 'pzl_84374170367';
+const PANCAKE_TOKEN = (process.env.PANCAKE_ACCESS_TOKEN || '').trim();
+const PAGE_ID = (process.env.PANCAKE_PAGE_ID || 'pzl_84374170367').trim();
 
 // Kiểm tra Token khi khởi động
 const checkToken = async () => {
@@ -323,7 +323,6 @@ app.all('/api/sync-pancake', async (req, res) => {
 
     for (let i = 0; i < strategies.length; i++) {
       try {
-        addLog(`📡 Thử phương án ${i + 1}...`);
         const response = await fetch(strategies[i], { 
           signal: controller.signal,
           headers: { 'Accept': 'application/json' }
@@ -334,11 +333,12 @@ app.all('/api/sync-pancake', async (req, res) => {
           resultData = data;
           successStrategy = i;
           break;
-        } else if (i === strategies.length - 1) {
-          resultData = data; // Lưu lỗi cuối cùng để báo cáo
+        } else {
+          addLog(`❌ PA ${i + 1} lỗi: ${data.message || JSON.stringify(data)}`);
+          if (i === strategies.length - 1) resultData = data;
         }
       } catch (e) {
-        addLog(`⚠️ Phương án ${i + 1} thất bại: ${e.message}`);
+        addLog(`⚠️ PA ${i + 1} treo: ${e.message}`);
       }
     }
 
