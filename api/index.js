@@ -26,9 +26,19 @@ const PANCAKE_TOKEN = process.env.PANCAKE_ACCESS_TOKEN || 'eyJhbGciOiJIUzI1NiIsI
 // --- DATABASE INITIALIZATION ---
 const initDB = async () => {
   try {
+    // 1. Ưu tiên tạo bảng log trước để ghi lại quá trình
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS system_logs (
+        id SERIAL PRIMARY KEY,
+        message TEXT,
+        data JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     addLog('⏳ Đang kiểm tra cấu trúc Database...');
     
-    // 1. Tạo bảng courses
+    // 2. Tạo bảng courses
     await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
@@ -40,7 +50,7 @@ const initDB = async () => {
       )
     `);
     
-    // 2. Tạo bảng customers với Unique Constraint
+    // 3. Tạo bảng customers với Unique Constraint
     await pool.query(`
       CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
@@ -55,7 +65,7 @@ const initDB = async () => {
       )
     `);
 
-    // 3. Tạo bảng customer_activities
+    // 4. Tạo bảng customer_activities
     await pool.query(`
       CREATE TABLE IF NOT EXISTS customer_activities (
         id SERIAL PRIMARY KEY,
@@ -67,6 +77,16 @@ const initDB = async () => {
       )
     `);
     
+    // 4. Tạo bảng system_logs
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS system_logs (
+        id SERIAL PRIMARY KEY,
+        message TEXT,
+        data JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     // Migration cho các cột cũ (nếu có)
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS description TEXT');
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0');
@@ -118,19 +138,16 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-// Biến tạm lưu log trong bộ nhớ (chỉ tồn tại khi server chạy)
-let systemLogs = [];
-
-function addLog(message, data = null) {
-  const log = {
-    id: Date.now(),
-    time: new Date().toLocaleString('vi-VN'),
-    message,
-    data
-  };
-  systemLogs.unshift(log);
-  if (systemLogs.length > 50) systemLogs.pop();
-  console.log(`[LOG] ${message}`, data || '');
+async function addLog(message, data = null) {
+  try {
+    console.log(`[LOG] ${message}`, data || '');
+    await pool.query(
+      'INSERT INTO system_logs (message, data) VALUES ($1, $2)',
+      [message, data ? JSON.stringify(data) : null]
+    );
+  } catch (err) {
+    console.error('Lỗi lưu log vào DB:', err);
+  }
 }
 
 // 0. Kiểm tra kết nối DB
@@ -155,9 +172,20 @@ app.get('/api/customers', async (req, res) => {
   }
 });
 
-// 1b. Lấy nhật ký hệ thống
-app.get('/api/logs', (req, res) => {
-  res.json(systemLogs);
+// 1b. Lấy nhật ký hệ thống (từ DB)
+app.get('/api/logs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 50');
+    const formattedLogs = result.rows.map(r => ({
+      id: r.id,
+      time: new Date(r.created_at).toLocaleString('vi-VN'),
+      message: r.message,
+      data: r.data
+    }));
+    res.json(formattedLogs);
+  } catch (err) {
+    res.status(500).json([]);
+  }
 });
 
 // 2. Lấy danh sách khóa học
