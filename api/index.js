@@ -72,6 +72,10 @@ const initDB = async () => {
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0');
     await pool.query('ALTER TABLE courses ADD COLUMN IF NOT EXISTS level TEXT DEFAULT ' + "'Basic'");
     
+    // Migration cho bảng customers
+    await pool.query('ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()');
+    await pool.query('ALTER TABLE customers ADD COLUMN IF NOT EXISTS lead_status TEXT DEFAULT \'NEW\'');
+    
     isDbInitialized = true;
     addLog('✅ Database initialized: All tables ready.');
   } catch (err) {

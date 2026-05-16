@@ -191,9 +191,13 @@ const CrmDashboard = () => {
     fetch(`${API_URL}/customers`)
       .then(res => res.json())
       .then(data => {
-        const pCount = data.filter((c: any) => c.source.includes('pancake')).length;
-        setStats({ total: data.length, pancake: pCount });
-        setActivities(data.slice(0, 5));
+        if (Array.isArray(data)) {
+          const pCount = data.filter((c: any) => c.source && c.source.includes('pancake')).length;
+          setStats({ total: data.length, pancake: pCount });
+          setActivities(data.slice(0, 5));
+        } else {
+          console.error('Dữ liệu khách hàng không hợp lệ:', data);
+        }
       })
       .catch(err => console.error('Lỗi dashboard:', err));
   }, []);
