@@ -29,8 +29,10 @@ const checkToken = async () => {
   if (!PANCAKE_TOKEN) {
     await addLog('❌ LỖI: PANCAKE_ACCESS_TOKEN chưa được cấu hình trên Vercel!');
   } else {
-    // Hiện 15 ký tự để bạn dễ so sánh với Token mới
-    await addLog(`✅ Token đang dùng: "${PANCAKE_TOKEN.substring(0, 15)}..."`);
+    // Hiện 15 ký tự đầu và 4 ký tự cuối để bạn dễ so sánh với Token mới
+    const start = PANCAKE_TOKEN.substring(0, 15);
+    const end = PANCAKE_TOKEN.substring(PANCAKE_TOKEN.length - 4);
+    await addLog(`✅ Token đang dùng: "${start}...${end}"`);
   }
 };
 checkToken();
@@ -314,40 +316,55 @@ app.all('/api/sync-pancake', async (req, res) => {
     
     // Danh sách các phương án thử gọi API
     const strategies = [
-      `https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`,
-      `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`,
-      `https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`
+      { url: `https://pages.pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`, method: 'GET' },
+      { url: `https://pancake.vn/api/v1/pages/${PAGE_ID}/conversations?access_token=${PANCAKE_TOKEN}`, method: 'GET' },
+      { url: `https://pancake.vn/api/v1/pages/${PURE_PAGE_ID}/conversations`, method: 'GET', headers: { 'x-access-token': PANCAKE_TOKEN } },
+      { url: `https://pancake.vn/api/v1/conversations?access_token=${PANCAKE_TOKEN}`, method: 'GET' }
     ];
 
     let resultData = null;
     let successStrategy = -1;
+    let lastError = null;
 
     for (let i = 0; i < strategies.length; i++) {
       try {
-        const response = await fetch(strategies[i], { 
+        const strategy = strategies[i];
+        addLog(`📡 Thử PA ${i + 1}: ${strategy.url.split('?')[0]}`);
+        
+        const response = await fetch(strategy.url, { 
+          method: strategy.method,
           signal: controller.signal,
-          headers: { 'Accept': 'application/json' }
+          headers: { 
+            'Accept': 'application/json',
+            ...(strategy.headers || {})
+          }
         });
+        
         const data = await response.json();
         
-        if (data.success !== false && !data.error_code) {
+        if (data.success !== false && !data.error_code && (data.conversations || data.data)) {
           resultData = data;
           successStrategy = i;
           break;
         } else {
-          addLog(`❌ PA ${i + 1} lỗi: ${data.message || JSON.stringify(data)}`);
-          if (i === strategies.length - 1) resultData = data;
+          lastError = data;
+          const errorMsg = data.message || data.error || 'Unknown error';
+          addLog(`❌ PA ${i + 1} lỗi: ${errorMsg} (Code: ${data.error_code || 'N/A'})`);
         }
       } catch (e) {
-        addLog(`⚠️ PA ${i + 1} treo: ${e.message}`);
+        addLog(`⚠️ PA ${i + 1} treo hoặc lỗi mạng: ${e.message}`);
       }
     }
 
     clearTimeout(timeoutId);
 
-    if (!resultData || resultData.success === false || resultData.error_code === 102) {
-      addLog('❌ Tất cả phương án đồng bộ đều thất bại do Token lỗi.', resultData);
-      return res.json({ success: false, error: 'Token Pancake đã hết hạn hoặc sai Page ID. Vui lòng kiểm tra lại.' });
+    if (!resultData) {
+      addLog('❌ Tất cả phương án đồng bộ đều thất bại.', lastError);
+      return res.json({ 
+        success: false, 
+        error: 'Không thể kết nối với Pancake API hoặc Token không hợp lệ.',
+        details: lastError 
+      });
     }
 
     const conversations = resultData.conversations || (resultData.data && resultData.data.conversations) || resultData.data || [];
